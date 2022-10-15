@@ -9,7 +9,7 @@
 #include <ros/time.h>
 #include <math.h>
 
-#include <robot_localization/navsat_conversions.h>
+#include "/home/rezoom/catkin_ws/src/robot_localization/include/robot_localization/navsat_conversions.h"
 #include <tf/transform_listener.h>
 
 double latiPoint_raw = 0, longiPoint_raw = 0, latiPoint_filtered = 0, longiPoint_filtered = 0;

@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   roslib
   roslaunch
+  robot_localization
 )
 
 catkin_package()
@@ -22,7 +23,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 add_executable(gps_waypoint src/gps_waypoint.cpp)
-#add_executable(gps_waypoint_continuous src/gps_waypoint_continuous.cpp)
+add_executable(indoor_waypoint src/indoor_waypoint.cpp)
 add_executable(gps_waypoint_continuous1 src/gps_waypoint_continuous1.cpp)
 add_executable(gps_waypoint_continuous2 src/gps_waypoint_continuous2.cpp)
 add_executable(gps_waypoint_mapping src/gps_waypoint_mapping.cpp)
@@ -33,7 +34,7 @@ add_executable(safety_node src/safety_node.cpp)
 add_executable(switch_controllers src/switch_controllers.cpp)
 
 target_link_libraries(gps_waypoint ${catkin_LIBRARIES})
-# target_link_libraries(gps_waypoint_continuous ${catkin_LIBRARIES})
+target_link_libraries(indoor_waypoint ${catkin_LIBRARIES})
 target_link_libraries(gps_waypoint_continuous1 ${catkin_LIBRARIES})
 target_link_libraries(gps_waypoint_continuous2 ${catkin_LIBRARIES})
 target_link_libraries(gps_waypoint_mapping ${catkin_LIBRARIES})

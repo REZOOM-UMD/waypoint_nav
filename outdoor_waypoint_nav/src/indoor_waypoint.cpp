@@ -1,3 +1,5 @@
+// Reads coordinates w.r.t. map frame and passes them to move_base as an odom frame goal.
+// This was created for a indoor demo at RAL on Jul 29, 2022. Variables are not renamed appropriately!
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <fstream>
@@ -9,8 +11,6 @@
 #include <geometry_msgs/PointStamped.h>
 #include <std_msgs/Bool.h>
 #include <tf/transform_listener.h>
-#include "tf/tf.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <math.h>
 
 
@@ -47,7 +47,7 @@ int countWaypointsInFile(std::string path_local)
         }
         count = count - 1;
         numWaypoints = count / 2;
-        ROS_INFO("%.0f GPS waypoints were read", numWaypoints);
+        ROS_INFO("%.0f waypoints were read", numWaypoints);
         fileCount.close();
     }
     else
@@ -73,7 +73,7 @@ std::vector <std::pair<double, double>> getWaypoints(std::string path_local)
     fileRead.close();
 
     //Outputting vector
-    ROS_INFO("The following GPS Waypoints have been set:");
+    ROS_INFO("The following Waypoints have been set:");
     for(std::vector < std::pair < double, double >> ::iterator iterDisp = waypointVect.begin(); iterDisp != waypointVect.end();
     iterDisp++)
     {
@@ -84,17 +84,17 @@ std::vector <std::pair<double, double>> getWaypoints(std::string path_local)
 
 geometry_msgs::PointStamped latLongtoUTM(double lati_input, double longi_input)
 {
-    double utm_x = 0, utm_y = 0;
+    //double utm_x = 0, utm_y = 0;
     geometry_msgs::PointStamped UTM_point_output;
 
     //convert lat/long to utm
-    RobotLocalization::NavsatConversions::LLtoUTM(lati_input, longi_input, utm_y, utm_x, utm_zone);
+    //RobotLocalization::NavsatConversions::LLtoUTM(lati_input, longi_input, utm_y, utm_x, utm_zone);
 
     //Construct UTM_point and map_point geometry messages
-    UTM_point_output.header.frame_id = "utm";
+    UTM_point_output.header.frame_id = "map";
     UTM_point_output.header.stamp = ros::Time(0);
-    UTM_point_output.point.x = utm_x;
-    UTM_point_output.point.y = utm_y;
+    UTM_point_output.point.x = lati_input;
+    UTM_point_output.point.y = longi_input;
     UTM_point_output.point.z = 0;
 
     return UTM_point_output;
@@ -111,7 +111,7 @@ geometry_msgs::PointStamped UTMtoMapPoint(geometry_msgs::PointStamped UTM_input)
         try
         {
             UTM_point.header.stamp = ros::Time::now();
-            listener.waitForTransform("odom", "utm", time_now, ros::Duration(3.0));
+            listener.waitForTransform("odom", "map", time_now, ros::Duration(3.0));
             listener.transformPoint("odom", UTM_input, map_point_output);
             notDone = false;
         }
@@ -167,18 +167,11 @@ move_base_msgs::MoveBaseGoal buildGoal(geometry_msgs::PointStamped map_point, ge
     return goal;
 }
 
-float distance_from_origin(geometry_msgs::PointStamped point_stamped) {
-    float x = point_stamped.point.x;
-    float y = point_stamped.point.y;
-
-    return hypot(x, y);
-}
-
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "gps_waypoint"); //initiate node called gps_waypoint
+    ros::init(argc, argv, "indoor_waypoint"); //initiate node called gps_waypoint
     ros::NodeHandle n;
-    ROS_INFO("Initiated gps_waypoint node");
+    ROS_INFO("Initiated indoor_waypoint node");
     MoveBaseClient ac("/move_base", true);
     //construct an action client that we use to communication with the action named move_base.
     //Setting true is telling the constructor to start ros::spin()
@@ -202,9 +195,7 @@ int main(int argc, char** argv)
         ROS_INFO("Waiting for the move_base action server to come up");
     }
 
-    tf::TransformListener listener;  //create transformlistener object called listener
-
-    ROS_INFO("Getting Latitutde and Longitude goals from text file");
+    ROS_INFO("Getting goals from text file");
 
     //Get Longitude and Latitude goals from text file
 
@@ -239,8 +230,8 @@ int main(int argc, char** argv)
             final_point = true;
         }
 
-        ROS_INFO("Received Latitude goal:%.8f", latiGoal);
-        ROS_INFO("Received longitude goal:%.8f", longiGoal);
+        ROS_INFO("Received goal:%.8f", latiGoal);
+        ROS_INFO("Received goal:%.8f", longiGoal);
 
         //Convert lat/long to utm:
         UTM_point = latLongtoUTM(latiGoal, longiGoal);
@@ -257,73 +248,27 @@ int main(int argc, char** argv)
         ROS_INFO("Sending goal");
         ac.sendGoal(goal); //push goal to move_base node
 
-        // check euclidean distance of goal pose in base_footprint frame and send next goal if within 2 meters.
-        geometry_msgs::PointStamped base_point_output;
-        bool notDone = true;
-
-        while(notDone)
-        {
-            try
-            {
-                //ROS_INFO("Waiting for tf...");
-
-                tf::StampedTransform transform;
-                //listener.lookupTransform("base_footprint", "odom", ros::Time(0), transform);
-                //const tf::Stamped<tf::Point>& stamped_in = map_point;
-                //tf::Stamped<tf::Point>& stamped_out = base_point_output;
-                //stamped_out.setData(transform * stamped_in);
-                //stamped_out.stamp_ = transform.stamp_;
-                //stamped_out.frame_id_ = "base_footprint";
-                //UTM_point.header.stamp = ros::Time::now();
-                //listener.waitForTransform("base_footprint", "odom", ros::Time(0), ros::Duration(4.0));
-                
-                map_point.header.stamp = ros::Time(0);
-                listener.transformPoint("base_footprint", map_point, base_point_output);
-
-                //ROS_INFO("Received tf!");
-
-                float distance_to_goal = distance_from_origin(base_point_output);
-
-                if (distance_to_goal < (float)2) {
-                    ROS_INFO("Reached within 2 meters!");
-                    notDone = false;
-                } 
-                else {
-                    ROS_INFO("Distance to goal is %f meters", distance_to_goal);
-                }
-                
-            }
-            catch (tf::TransformException& ex)
-            {
-                ROS_WARN("%s", ex.what());
-                ros::Duration(0.01).sleep();
-                //return;
-            }
-        }
-
-
-
         //Wait for result
-        // ac.waitForResult(); //waiting to see if move_base was able to reach goal
+        ac.waitForResult(); //waiting to see if move_base was able to reach goal
 
-        // if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-        // {
-        //     ROS_INFO("Husky has reached its goal!");
-        //     //switch to next waypoint and repeat
-        // }
-        // else
-        // {
-        //     ROS_ERROR("Husky was unable to reach its goal. GPS Waypoint unreachable.");
-        //     ROS_INFO("Exiting node...");
-        //     // Notify joy_launch_control that waypoint following is complete
-        //     std_msgs::Bool node_ended;
-        //     node_ended.data = true;
-        //     pubWaypointNodeEnded.publish(node_ended);
-        //     ros::shutdown();
-        // }
+        if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        {
+            ROS_INFO("Scooter has reached its goal!");
+            //switch to next waypoint and repeat
+        }
+        else
+        {
+            ROS_ERROR("Scooter was unable to reach its goal. Waypoint unreachable.");
+            ROS_INFO("Exiting node...");
+            // Notify joy_launch_control that waypoint following is complete
+            std_msgs::Bool node_ended;
+            node_ended.data = true;
+            pubWaypointNodeEnded.publish(node_ended);
+            ros::shutdown();
+        }
     } // End for loop iterating through waypoint vector
 
-    ROS_INFO("Husky has reached all of its goals!!!\n");
+    ROS_INFO("Scooter has reached all of its goals!!!\n");
     ROS_INFO("Ending node...");
 
     // Notify joy_launch_control that waypoint following is complete

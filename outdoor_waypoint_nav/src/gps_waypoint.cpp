@@ -284,8 +284,8 @@ int main(int argc, char** argv)
 
                 float distance_to_goal = distance_from_origin(base_point_output);
 
-                if (distance_to_goal < (float)2) {
-                    ROS_INFO("Reached within 2 meters!");
+                if (distance_to_goal < (float)3) {
+                    ROS_INFO("Reached within 3 meters!");
                     notDone = false;
                 } 
                 else {

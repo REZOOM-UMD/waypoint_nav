@@ -7,7 +7,7 @@
 #include <vector>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-#include "/home/rezoom/catkin_ws/src/robot_localization/include/robot_localization/navsat_conversions.h"
+#include "robot_localization/navsat_conversions.h"
 #include <geometry_msgs/PointStamped.h>
 #include <std_msgs/Bool.h>
 #include <tf/transform_listener.h>
